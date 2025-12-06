@@ -11,7 +11,7 @@ dotenv.config();
 const router = express.Router();
 
 /* ------------------------------------------------------
-    📌 1. CREATE DONOR + SEND REGISTRATION EMAIL
+    📌 1. CREATE DONOR (Super Fast – No Await Email)
 ---------------------------------------------------------*/
 router.post("/create-donor", async (req, res) => {
     try {
@@ -21,17 +21,14 @@ router.post("/create-donor", async (req, res) => {
             return res.status(400).json({ message: "Please fill all details" });
         }
 
-        // Check duplicates
         const isExistDonor = await donorModel.findOne({ email });
         if (isExistDonor) {
             return res.status(409).json({ message: "Email already registered" });
         }
 
-        // Create donor
         const donor = new donorModel({ name, email, upiId, donationAmount });
         await donor.save();
 
-        // Nodemailer Transport
         const transporter = nodemailer.createTransport({
             service: "gmail",
             auth: {
@@ -53,8 +50,6 @@ router.post("/create-donor", async (req, res) => {
 
                 <p>Alhamdulillah! Aapka donor registration <b>successfully complete</b> ho gaya hai.</p>
 
-                <p>Hamari organization me aapka swagat hai! Aapka support hamare education aur welfare projects ke liye qeemti hai.</p>
-
                 <div style="background:#f7f7f7; padding:15px; border-radius:8px; margin-top:10px;">
                     <p><b>Name:</b> ${name}</p>
                     <p><b>Email:</b> ${email}</p>
@@ -63,17 +58,11 @@ router.post("/create-donor", async (req, res) => {
                 </div>
 
                 <p style="margin-top:20px;">JazakAllah khair for joining our mission.</p>
-
                 <p>Regards,<br><b>Kokan Education & Welfare Centre</b></p>
-            </div>
-
-            <div style="background:#fafafa; padding:12px; text-align:center; font-size:12px;">
-                Together, we can make a difference.
             </div>
         </div>
         `;
 
-        // Send Email
         const mailOptions = {
             from: `"Kokan Education & Welfare Centre" <${process.env.EMAIL_USER}>`,
             to: email,
@@ -81,9 +70,10 @@ router.post("/create-donor", async (req, res) => {
             html: message,
         };
 
-        await transporter.sendMail(mailOptions);
+        // 🚀 No Await — Send Email in Background
+        transporter.sendMail(mailOptions);
 
-        return res.status(201).json({ message: "Donor created and email sent", donor });
+        return res.status(201).json({ message: "Donor created successfully", donor });
 
     } catch (error) {
         console.log(error);
@@ -105,7 +95,7 @@ router.get("/get-donors", async (req, res) => {
 });
 
 /* ------------------------------------------------------
-    📌 3. DELETE DONOR + SEND EMAIL
+    📌 3. DELETE DONOR (Fast – No Await Email)
 ---------------------------------------------------------*/
 router.delete("/delete-donor/:id", async (req, res) => {
     try {
@@ -118,8 +108,8 @@ router.delete("/delete-donor/:id", async (req, res) => {
 
         await donorModel.findByIdAndDelete(id);
 
-        // Send Delete Email with Admin-style HTML
-        await sendEmail({
+        // ⛔ REMOVE await (fast)
+        sendEmail({
             email: donor.email,
             subject: "Donor Account Deleted - KEWC",
             html: `
@@ -131,21 +121,15 @@ router.delete("/delete-donor/:id", async (req, res) => {
 
                     <div style="padding:20px;">
                         <p>Assalamualaikum <b>${donor.name}</b>,</p>
-                        <p>Aapka donor account KEWC system se successfully remove kar diya gaya hai.</p>
-                        <p>Ab aap donor panel access nahi kar sakenge.</p>
-                        <p>Agar aapko lagta hai ki yeh galti se hua hai toh please management se contact karein.</p>
+                        <p>Aapka donor account successfully remove kar diya gaya hai.</p>
                         <p>Regards,<br><b>Kokan Education & Welfare Centre</b></p>
-                    </div>
-
-                    <div style="background:#f9f9f9; padding:10px; text-align:center; font-size:12px; color:#777;">
-                        This is an automated email. Please do not reply.
                     </div>
                 </div>
             `
         });
 
         res.status(200).json({
-            message: "Donor deleted & email sent",
+            message: "Donor deleted successfully",
             deleted: donor
         });
 
@@ -156,7 +140,7 @@ router.delete("/delete-donor/:id", async (req, res) => {
 });
 
 /* ------------------------------------------------------
-    📌 4. SEND REMINDER EMAIL
+    📌 4. SEND REMINDER (Fast – No Await Email)
 ---------------------------------------------------------*/
 router.post("/send-reminder/:id", async (req, res) => {
     try {
@@ -170,7 +154,6 @@ router.post("/send-reminder/:id", async (req, res) => {
         const UPI_ID = process.env.UPI_ID;
         const PHONE = process.env.PHONE;
 
-        // -------------------- 1️⃣ Store Payment in DB --------------------
         let payment = await paymentModel.findOne({ donor: donor._id, status: "pending" });
         if (!payment) {
             payment = new paymentModel({
@@ -181,7 +164,6 @@ router.post("/send-reminder/:id", async (req, res) => {
             await payment.save();
         }
 
-        // -------------------- 2️⃣ Generate QR code --------------------
         const upiPayloadRaw = `upi://pay?pa=${UPI_ID}&pn=Kokan%20Education%20%26%20Welfare%20Centre&am=${amount}&cu=INR&tn=Donation%20by%20${donorName}`;
         const qrDataUrl = await qrcode.toDataURL(upiPayloadRaw, {
             errorCorrectionLevel: "H",
@@ -192,31 +174,27 @@ router.post("/send-reminder/:id", async (req, res) => {
         const base64Data = qrDataUrl.split(",")[1];
         const qrBuffer = Buffer.from(base64Data, "base64");
 
-        // -------------------- 3️⃣ Email Message --------------------
         const message = `
             <div style="font-family: Arial; max-width:600px; margin:auto;">
                 <h2 style="background:#0b77d1; padding:15px; color:white; text-align:center;">
-                    Donation Reminder - Kokan Education & Welfare Centre
+                    Donation Reminder - KEWC
                 </h2>
                 <p>Assalamualaikum <b>${donorName}</b>,</p>
                 <p>Aapka donation amount <b>₹${amount}</b> abhi tak receive nahi hua.</p>
-                <p>Please neeche diye gaye QR code se payment kar dein.</p>
 
                 <div style="text-align:center;">
                     <img src="cid:qrinline@kewc" style="width:250px;" />
                 </div>
 
                 <p><b>UPI ID:</b> ${UPI_ID}</p>
-                <p><b>Paytm Phone Number:</b> ${PHONE}</p>
-
-                <p>JazakAllah khair.</p>
+                <p><b>Phone:</b> ${PHONE}</p>
             </div>
         `;
 
-        // -------------------- 4️⃣ Send Email --------------------
-        const sent = await sendEmail({
+        // ⛔ REMOVE await (email goes background)
+        sendEmail({
             email: donor.email,
-            subject: "Donation Reminder",
+            subject: "Donation Reminder - KEWC",
             html: message,
             attachments: [
                 {
@@ -227,11 +205,10 @@ router.post("/send-reminder/:id", async (req, res) => {
             ]
         });
 
-        // -------------------- 5️⃣ Update lastReminderSent --------------------
         payment.lastReminderSent = new Date();
         await payment.save();
 
-        res.json({ message: "Reminder email sent & payment stored", payment, info: sent });
+        res.json({ message: "Reminder email sent", payment });
 
     } catch (err) {
         console.error(err);

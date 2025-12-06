@@ -18,7 +18,6 @@ const transporter = nodemailer.createTransport({
 });
 
 /* ------------------ SEND REGISTRATION EMAIL ------------------ */
-/* ------------------ SEND REGISTRATION EMAIL WITH CREDENTIALS ------------------ */
 async function sendAdminRegistrationEmail(email, fullName, username, password) {
   try {
     await transporter.sendMail({
@@ -40,7 +39,7 @@ async function sendAdminRegistrationEmail(email, fullName, username, password) {
             <ul>
               <li>Fullname: <b>${fullName}</b></li>
               <li>Username: <b>${username}</b></li>
-               <li>Email: <b>${email}</b></li>
+              <li>Email: <b>${email}</b></li>
               <li>Password: <b>${password}</b></li>
             </ul>
 
@@ -56,14 +55,14 @@ async function sendAdminRegistrationEmail(email, fullName, username, password) {
         </div>
       `,
     });
-    console.log("✅ Admin registration email sent with login credentials");
+
+    console.log("✅ Admin registration email sent.");
   } catch (err) {
-    console.error("❌ Email Error:", err);
+    console.error("❌ Email sending error:", err);
   }
 }
 
-
-/* ------------------ SEND DELETE ADMIN EMAIL ------------------ */
+/* ------------------ SEND DELETE EMAIL ------------------ */
 async function sendAdminDeletionEmail(email, fullName) {
   try {
     await transporter.sendMail({
@@ -71,7 +70,7 @@ async function sendAdminDeletionEmail(email, fullName) {
       to: email,
       subject: "Admin Account Deleted - KEWC",
       html: `
-        <div style="font-family: Arial; max-width:600px; margin:auto; border:1px solid #eee; border-radius:10px;">
+       <div style="font-family: Arial; max-width:600px; margin:auto; border:1px solid #eee; border-radius:10px;">
           <div style="background:#d62828; padding:20px; color:white; text-align:center;">
             <h2 style="margin:0;">Kokan Education & Welfare Centre</h2>
             <p style="margin:5px 0 0;">Admin Account Removal</p>
@@ -79,10 +78,9 @@ async function sendAdminDeletionEmail(email, fullName) {
 
           <div style="padding:20px;">
             <p>Assalamualaikum <b>${fullName}</b>,</p>
-            <p>Aapka admin account KEWC system se successfully remove kar diya gaya hai.</p>
+            <p>Aapka admin account KEWC system se remove kar diya gaya hai.</p>
             <p>Ab aap admin panel access nahi kar sakenge.</p>
-            <p>Agar aapko lagta hai ki yeh galti se hua hai toh please management se contact karein.</p>
-            <p>Regards,<br><b>Kokan Education & Welfare Centre</b></p>
+            <p>Agar yeh galti se hua hai toh please management se contact karein.</p>
           </div>
 
           <div style="background:#f9f9f9; padding:10px; text-align:center; font-size:12px; color:#777;">
@@ -91,20 +89,18 @@ async function sendAdminDeletionEmail(email, fullName) {
         </div>
       `,
     });
-    console.log("✅ Admin deletion email sent");
+
+    console.log("✅ Admin deletion email sent.");
   } catch (err) {
-    console.error("❌ Email Error:", err);
+    console.error("❌ Email sending error:", err);
   }
 }
 
 /* ------------------ GET ALL ADMINS ------------------ */
 router.get("/get-admins", async (req, res) => {
   try {
-    const admins = await adminModel.find().select("-password"); // Hide password
-    res.status(200).json({
-      message: "Admins fetched successfully",
-      admins,
-    });
+    const admins = await adminModel.find().select("-password");
+    res.status(200).json({ message: "Admins fetched successfully", admins });
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: "Server error" });
@@ -137,9 +133,8 @@ router.post("/create-admin", async (req, res) => {
 
     await newAdmin.save();
 
-    // Send registration email
-await sendAdminRegistrationEmail(email, fullName, username, password);
-
+    // email send in background
+    sendAdminRegistrationEmail(email, fullName, username, password);
 
     res.status(201).json({
       message: "Admin created successfully",
@@ -171,7 +166,9 @@ router.post("/login", async (req, res) => {
     const isMatch = await bcrypt.compare(password, admin.password);
     if (!isMatch) return res.status(401).json({ message: "Invalid credentials" });
 
-    const token = jwt.sign({ id: admin._id }, process.env.JWT_SECRET, { expiresIn: "1h" });
+    const token = jwt.sign({ id: admin._id }, process.env.JWT_SECRET, {
+      expiresIn: "1h",
+    });
 
     res.status(200).json({
       message: "Login successful",
@@ -199,11 +196,11 @@ router.delete("/delete-admin/:id", async (req, res) => {
 
     await adminModel.findByIdAndDelete(id);
 
-    // Send deletion email
-    await sendAdminDeletionEmail(adminExist.email, adminExist.fullName);
+    // email send in background
+    sendAdminDeletionEmail(adminExist.email, adminExist.fullName);
 
     res.status(200).json({
-      message: "Admin deleted successfully and email sent",
+      message: "Admin deleted successfully",
       admin: {
         id: adminExist._id,
         username: adminExist.username,
