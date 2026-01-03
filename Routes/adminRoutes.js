@@ -9,7 +9,7 @@ dotenv.config();
 const router = express.Router();
 
 /* ------------------ ADMIN REGISTRATION EMAIL ------------------ */
-async function sendAdminRegistrationEmail(email, fullName, username, password) {
+function sendAdminRegistrationEmail(email, fullName, username, password) {
   const html = `
     <div style="font-family: Arial; max-width:600px; margin:auto; border:1px solid #eee; border-radius:10px;">
       <div style="background:#0b77d1; padding:20px; color:white; text-align:center;">
@@ -27,23 +27,21 @@ async function sendAdminRegistrationEmail(email, fullName, username, password) {
         </ul>
         <p>
           Login here:
-          <a href="${process.env.ADMIN_PANEL_URL || "https://kokaneducationcentre.vercel.app/index.html"}" target="_blank">
-            KEWC Admin Panel
-          </a>
+          <a href="${process.env.ADMIN_PANEL_URL}" target="_blank">KEWC Admin Panel</a>
         </p>
         <p>Regards,<br/><b>Kokan Education & Welfare Centre</b></p>
       </div>
     </div>
   `;
 
-  // Async background email with proper error handling
+  // Async background email
   sendEmail({ email, subject: "Admin Registration Successful - KEWC", html })
     .then(res => console.log("✅ Admin registration email sent:", res))
     .catch(err => console.error("❌ Admin registration email failed:", err));
 }
 
 /* ------------------ ADMIN DELETION EMAIL ------------------ */
-async function sendAdminDeletionEmail(email, fullName) {
+function sendAdminDeletionEmail(email, fullName) {
   const html = `
     <div style="font-family: Arial; max-width:600px; margin:auto; border:1px solid #eee; border-radius:10px;">
       <div style="background:#d62828; padding:20px; color:white; text-align:center;">
@@ -54,6 +52,7 @@ async function sendAdminDeletionEmail(email, fullName) {
         <p>Assalamualaikum <b>${fullName}</b>,</p>
         <p>Aapka admin account system se remove kar diya gaya hai.</p>
         <p>Agar yeh mistake hai toh management se contact karein.</p>
+        <p>Regards,<br/><b>Kokan Education & Welfare Centre</b></p>
       </div>
     </div>
   `;
@@ -69,6 +68,7 @@ router.get("/get-admins", async (req, res) => {
     const admins = await adminModel.find().select("-password");
     res.status(200).json({ message: "Admins fetched successfully", admins });
   } catch (error) {
+    console.error(error);
     res.status(500).json({ message: "Server error" });
   }
 });
@@ -97,6 +97,7 @@ router.post("/create-admin", async (req, res) => {
       admin: { id: newAdmin._id, username, fullName, email },
     });
   } catch (error) {
+    console.error(error);
     res.status(500).json({ message: "Server error" });
   }
 });
@@ -121,6 +122,7 @@ router.post("/login", async (req, res) => {
       admin: { id: admin._id, username: admin.username, fullName: admin.fullName, email: admin.email },
     });
   } catch (error) {
+    console.error(error);
     res.status(500).json({ message: "Server error" });
   }
 });
@@ -141,6 +143,7 @@ router.delete("/delete-admin/:id", async (req, res) => {
       admin: { id: adminExist._id, username: adminExist.username, fullName: adminExist.fullName, email: adminExist.email },
     });
   } catch (error) {
+    console.error(error);
     res.status(500).json({ message: "Server error" });
   }
 });
