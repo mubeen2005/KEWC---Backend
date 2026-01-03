@@ -27,7 +27,7 @@ async function sendAdminRegistrationEmail(email, fullName, username, password) {
         </ul>
         <p>
           Login here:
-          <a href="${"https://kokaneducationcentre.vercel.app/index.html"}" target="_blank">
+          <a href="${process.env.ADMIN_PANEL_URL || "https://kokaneducationcentre.vercel.app/index.html"}" target="_blank">
             KEWC Admin Panel
           </a>
         </p>
@@ -36,7 +36,10 @@ async function sendAdminRegistrationEmail(email, fullName, username, password) {
     </div>
   `;
 
-  await sendEmail({ email, subject: "Admin Registration Successful - KEWC", html });
+  // Async background email with proper error handling
+  sendEmail({ email, subject: "Admin Registration Successful - KEWC", html })
+    .then(res => console.log("✅ Admin registration email sent:", res))
+    .catch(err => console.error("❌ Admin registration email failed:", err));
 }
 
 /* ------------------ ADMIN DELETION EMAIL ------------------ */
@@ -55,7 +58,9 @@ async function sendAdminDeletionEmail(email, fullName) {
     </div>
   `;
 
-  await sendEmail({ email, subject: "Admin Account Deleted - KEWC", html });
+  sendEmail({ email, subject: "Admin Account Deleted - KEWC", html })
+    .then(res => console.log("✅ Admin deletion email sent:", res))
+    .catch(err => console.error("❌ Admin deletion email failed:", err));
 }
 
 /* ------------------ GET ALL ADMINS ------------------ */
@@ -84,7 +89,7 @@ router.post("/create-admin", async (req, res) => {
     const newAdmin = new adminModel({ username, fullName, email, password: hashPassword });
     await newAdmin.save();
 
-    // Email send in background
+    // Email in background
     sendAdminRegistrationEmail(email, fullName, username, password);
 
     res.status(201).json({
@@ -128,7 +133,7 @@ router.delete("/delete-admin/:id", async (req, res) => {
 
     await adminModel.findByIdAndDelete(req.params.id);
 
-    // Email send in background
+    // Email in background
     sendAdminDeletionEmail(adminExist.email, adminExist.fullName);
 
     res.status(200).json({
