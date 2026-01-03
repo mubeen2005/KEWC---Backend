@@ -27,7 +27,7 @@ async function sendAdminRegistrationEmail(email, fullName, username, password) {
         </ul>
         <p>
           Login here:
-          <a href="${process.env.ADMIN_PANEL_URL}" target="_blank">
+          <a href="${"https://kokaneducationcentre.vercel.app/index.html"}" target="_blank">
             KEWC Admin Panel
           </a>
         </p>
