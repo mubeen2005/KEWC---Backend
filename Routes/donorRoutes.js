@@ -22,7 +22,7 @@ router.post("/create-donor", async (req, res) => {
     const donor = new donorModel({ name, email, upiId, donationAmount });
     await donor.save();
 
-    // Background email with proper logging
+    // Send registration email
     sendEmail({
       email,
       subject: "Welcome to KEWC - Donor Registration",
@@ -100,12 +100,14 @@ router.post("/send-reminder/:id", async (req, res) => {
       await payment.save();
     }
 
+    // Generate QR Code
     const qrDataUrl = await qrcode.toDataURL(
       `upi://pay?pa=${UPI_ID}&pn=KEWC&am=${amount}&cu=INR&tn=Donation%20by%20${donorName}`,
       { errorCorrectionLevel: "H", width: 400 }
     );
     const qrBuffer = Buffer.from(qrDataUrl.split(",")[1], "base64");
 
+    // Send email with attachment
     sendEmail({
       email: donor.email,
       subject: "Donation Reminder - KEWC",
@@ -121,9 +123,7 @@ router.post("/send-reminder/:id", async (req, res) => {
           <p><b>Phone:</b> ${PHONE}</p>
         </div>
       `,
-      attachments: [
-        { filename: "qr.png", content: qrBuffer, cid: "qrinline@kewc" },
-      ],
+      attachments: [{ filename: "qr.png", content: qrBuffer, cid: "qrinline@kewc" }],
     });
 
     payment.lastReminderSent = new Date();

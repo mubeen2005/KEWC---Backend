@@ -8,7 +8,7 @@ const sendEmail = require("../controller/sendEmail");
 dotenv.config();
 const router = express.Router();
 
-/* ------------------ ADMIN REGISTRATION EMAIL ------------------ */
+// ------------------ Admin Email Functions ------------------
 function sendAdminRegistrationEmail(email, fullName, username, password) {
   const html = `
     <div style="font-family: Arial; max-width:600px; margin:auto; border:1px solid #eee; border-radius:10px;">
@@ -34,13 +34,11 @@ function sendAdminRegistrationEmail(email, fullName, username, password) {
     </div>
   `;
 
-  // Async background email
   sendEmail({ email, subject: "Admin Registration Successful - KEWC", html })
     .then(res => console.log("✅ Admin registration email sent:", res))
     .catch(err => console.error("❌ Admin registration email failed:", err));
 }
 
-/* ------------------ ADMIN DELETION EMAIL ------------------ */
 function sendAdminDeletionEmail(email, fullName) {
   const html = `
     <div style="font-family: Arial; max-width:600px; margin:auto; border:1px solid #eee; border-radius:10px;">
@@ -51,7 +49,6 @@ function sendAdminDeletionEmail(email, fullName) {
       <div style="padding:20px;">
         <p>Assalamualaikum <b>${fullName}</b>,</p>
         <p>Aapka admin account system se remove kar diya gaya hai.</p>
-        <p>Agar yeh mistake hai toh management se contact karein.</p>
         <p>Regards,<br/><b>Kokan Education & Welfare Centre</b></p>
       </div>
     </div>
@@ -62,7 +59,7 @@ function sendAdminDeletionEmail(email, fullName) {
     .catch(err => console.error("❌ Admin deletion email failed:", err));
 }
 
-/* ------------------ GET ALL ADMINS ------------------ */
+// ------------------ Admin Routes ------------------
 router.get("/get-admins", async (req, res) => {
   try {
     const admins = await adminModel.find().select("-password");
@@ -73,23 +70,21 @@ router.get("/get-admins", async (req, res) => {
   }
 });
 
-/* ------------------ CREATE ADMIN ------------------ */
 router.post("/create-admin", async (req, res) => {
   try {
     const { username, fullName, email, password } = req.body;
-    if (!username || !fullName || !email || !password) {
+    if (!username || !fullName || !email || !password)
       return res.status(400).json({ message: "Please fill all details" });
-    }
 
     const existingAdmin = await adminModel.findOne({ username });
-    if (existingAdmin) return res.status(409).json({ message: "Username already taken" });
+    if (existingAdmin)
+      return res.status(409).json({ message: "Username already taken" });
 
     const hashPassword = await bcrypt.hash(password, 10);
 
     const newAdmin = new adminModel({ username, fullName, email, password: hashPassword });
     await newAdmin.save();
 
-    // Email in background
     sendAdminRegistrationEmail(email, fullName, username, password);
 
     res.status(201).json({
@@ -102,11 +97,11 @@ router.post("/create-admin", async (req, res) => {
   }
 });
 
-/* ------------------ LOGIN ADMIN ------------------ */
 router.post("/login", async (req, res) => {
   try {
     const { username, password } = req.body;
-    if (!username || !password) return res.status(400).json({ message: "Please fill all details" });
+    if (!username || !password)
+      return res.status(400).json({ message: "Please fill all details" });
 
     const admin = await adminModel.findOne({ username });
     if (!admin) return res.status(401).json({ message: "Invalid credentials" });
@@ -127,7 +122,6 @@ router.post("/login", async (req, res) => {
   }
 });
 
-/* ------------------ DELETE ADMIN ------------------ */
 router.delete("/delete-admin/:id", async (req, res) => {
   try {
     const adminExist = await adminModel.findById(req.params.id);
@@ -135,7 +129,6 @@ router.delete("/delete-admin/:id", async (req, res) => {
 
     await adminModel.findByIdAndDelete(req.params.id);
 
-    // Email in background
     sendAdminDeletionEmail(adminExist.email, adminExist.fullName);
 
     res.status(200).json({
