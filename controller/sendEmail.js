@@ -1,8 +1,6 @@
 const nodemailer = require("nodemailer");
-const dotenv = require("dotenv");
-dotenv.config();
+require("dotenv").config();
 
-// ⚡ Nodemailer transporter
 const transporter = nodemailer.createTransport({
   host: "smtp-relay.brevo.com",
   port: 587,
@@ -11,24 +9,22 @@ const transporter = nodemailer.createTransport({
     user: process.env.BREVO_USER,
     pass: process.env.BREVO_PASS,
   },
-}); 
+});
 
-// ⚡ Send Email function
 async function sendEmail({ email, subject, html, attachments = [] }) {
   try {
-    const mailOptions = {
-      from: `"Kokan Education & Welfare Centre"`,
+    const info = await transporter.sendMail({
+      from: `"Kokan Education & Welfare Centre" <${process.env.BREVO_USER}>`,
       to: email,
       subject,
       html,
       attachments,
-    };
+    });
 
-    const info = await transporter.sendMail(mailOptions);
-    console.log(`✅ Email sent to ${email} | Message ID: ${info.messageId}`);
-    return { success: true, info };
+    console.log("✅ Email sent:", info.messageId);
+    return { success: true };
   } catch (error) {
-    console.error(`❌ Email to ${email} failed:`, error.message);
+    console.error("❌ Email failed:", error);
     return { success: false, error: error.message };
   }
 }
