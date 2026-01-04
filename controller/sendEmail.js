@@ -4,12 +4,14 @@ dotenv.config();
 
 // ⚡ Nodemailer transporter
 const transporter = nodemailer.createTransport({
-  service: "gmail", // ya koi aur SMTP (Outlook, Yahoo, etc.)
+  host: "smtp-relay.brevo.com",
+  port: 587,
+  secure: false,
   auth: {
-    user: process.env.EMAIL_USER,  // tumhara Gmail
-    pass: process.env.EMAIL_PASS,  // Gmail App Password (2FA enabled hone par)
+    user: process.env.BREVO_USER,
+    pass: process.env.BREVO_PASS,
   },
-});
+}); 
 
 // ⚡ Send Email function
 async function sendEmail({ email, subject, html, attachments = [] }) {
