@@ -9,7 +9,11 @@ const transporter = nodemailer.createTransport({
     user: process.env.BREVO_USER,
     pass: process.env.BREVO_PASS,
   },
+  connectionTimeout: 10000, // 10 seconds
+  greetingTimeout: 10000,
+  socketTimeout: 10000,
 });
+
 
 async function sendEmail({ email, subject, html, attachments = [] }) {
   try {
