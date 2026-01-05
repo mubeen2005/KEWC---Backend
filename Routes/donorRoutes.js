@@ -22,7 +22,12 @@ router.post("/create-donor", async (req, res) => {
       return res.status(409).json({ message: "Email already registered" });
     }
 
-    const donor = new donorModel({ name, email, upiId, donationAmount });
+    const donor = new donorModel({
+      name,
+      email,
+      upiId,
+      donationAmount,
+    });
     await donor.save();
 
     const html = `
@@ -41,14 +46,17 @@ router.post("/create-donor", async (req, res) => {
       </div>
     `;
 
-    // email in background
+    // send email in background
     sendEmail({
-      to: email,
+      email: email, // ✅ FIXED
       subject: "Welcome to KEWC – Registration Successful",
       html,
-    });
+    }).catch(console.error);
 
-    res.status(201).json({ message: "Donor created successfully", donor });
+    res.status(201).json({
+      message: "Donor created successfully",
+      donor,
+    });
   } catch (err) {
     console.error(err);
     res.status(500).json({ message: "Server error" });
@@ -59,7 +67,10 @@ router.post("/create-donor", async (req, res) => {
 router.get("/get-donors", async (req, res) => {
   try {
     const donors = await donorModel.find();
-    res.status(200).json({ message: "Donors fetched successfully", donors });
+    res.status(200).json({
+      message: "Donors fetched successfully",
+      donors,
+    });
   } catch (err) {
     console.error(err);
     res.status(500).json({ message: "Server error" });
@@ -70,7 +81,9 @@ router.get("/get-donors", async (req, res) => {
 router.delete("/delete-donor/:id", async (req, res) => {
   try {
     const donor = await donorModel.findById(req.params.id);
-    if (!donor) return res.status(404).json({ message: "Donor not found" });
+    if (!donor) {
+      return res.status(404).json({ message: "Donor not found" });
+    }
 
     await donorModel.findByIdAndDelete(req.params.id);
 
@@ -86,12 +99,15 @@ router.delete("/delete-donor/:id", async (req, res) => {
     `;
 
     sendEmail({
-      to: donor.email,
+      email: donor.email, // ✅ FIXED
       subject: "Donor Account Deleted – KEWC",
       html,
-    });
+    }).catch(console.error);
 
-    res.status(200).json({ message: "Donor deleted successfully", donor });
+    res.status(200).json({
+      message: "Donor deleted successfully",
+      donor,
+    });
   } catch (err) {
     console.error(err);
     res.status(500).json({ message: "Server error" });
@@ -102,9 +118,11 @@ router.delete("/delete-donor/:id", async (req, res) => {
 router.post("/send-reminder/:id", async (req, res) => {
   try {
     const donor = await donorModel.findById(req.params.id);
-    if (!donor) return res.status(404).json({ message: "Donor not found" });
+    if (!donor) {
+      return res.status(404).json({ message: "Donor not found" });
+    }
 
-    const { donationAmount: amount, name } = donor;
+    const amount = donor.donationAmount;
     const { UPI_ID, PHONE } = process.env;
 
     let payment = await paymentModel.findOne({
@@ -121,7 +139,7 @@ router.post("/send-reminder/:id", async (req, res) => {
       await payment.save();
     }
 
-    const upiPayload = `upi://pay?pa=${UPI_ID}&pn=Kokan%20Education%20%26%20Welfare%20Centre&am=${amount}&cu=INR&tn=Donation%20by%20${name}`;
+    const upiPayload = `upi://pay?pa=${UPI_ID}&pn=Kokan%20Education%20%26%20Welfare%20Centre&am=${amount}&cu=INR&tn=Donation%20by%20${donor.name}`;
     const qrDataUrl = await qrcode.toDataURL(upiPayload);
     const qrBuffer = Buffer.from(qrDataUrl.split(",")[1], "base64");
 
@@ -130,7 +148,7 @@ router.post("/send-reminder/:id", async (req, res) => {
         <h2 style="background:#0b77d1; padding:15px; color:white; text-align:center;">
           Donation Reminder – KEWC
         </h2>
-        <p>Assalamualaikum <b>${name}</b>,</p>
+        <p>Assalamualaikum <b>${donor.name}</b>,</p>
         <p>Your pending donation amount is <b>₹${amount}</b>.</p>
         <div style="text-align:center;">
           <img src="cid:qr@kewc" width="220" />
@@ -141,7 +159,7 @@ router.post("/send-reminder/:id", async (req, res) => {
     `;
 
     sendEmail({
-      to: donor.email,
+      email: donor.email, // ✅ FIXED
       subject: "Donation Reminder – KEWC",
       html,
       attachments: [
@@ -151,12 +169,15 @@ router.post("/send-reminder/:id", async (req, res) => {
           cid: "qr@kewc",
         },
       ],
-    });
+    }).catch(console.error);
 
     payment.lastReminderSent = new Date();
     await payment.save();
 
-    res.status(200).json({ message: "Reminder email sent", payment });
+    res.status(200).json({
+      message: "Reminder email sent successfully",
+      payment,
+    });
   } catch (err) {
     console.error(err);
     res.status(500).json({ message: "Server error" });
@@ -164,3 +185,4 @@ router.post("/send-reminder/:id", async (req, res) => {
 });
 
 module.exports = router;
+

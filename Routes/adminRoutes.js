@@ -9,7 +9,7 @@ dotenv.config();
 const router = express.Router();
 
 /* ------------------ ADMIN REGISTRATION EMAIL ------------------ */
-function sendAdminRegistrationEmail(email, fullName, username, password) {
+function sendAdminRegistrationEmail(email, fullName, username) {
   const html = `
     <div style="font-family: Arial; max-width:600px; margin:auto; border:1px solid #eee; border-radius:10px;">
       <div style="background:#0b77d1; padding:20px; color:white; text-align:center;">
@@ -23,24 +23,28 @@ function sendAdminRegistrationEmail(email, fullName, username, password) {
           <li><b>Full Name:</b> ${fullName}</li>
           <li><b>Username:</b> ${username}</li>
           <li><b>Email:</b> ${email}</li>
-          <li><b>Password:</b> ${password}</li>
         </ul>
         <p>
           Login here:
-          <a href="${"https://kokaneducationcentre.vercel.app/index.html"}" target="_blank">KEWC Admin Panel</a>
+          <a href="https://kokaneducationcentre.vercel.app/index.html" target="_blank">
+            KEWC Admin Panel
+          </a>
+        </p>
+        <p style="color:#d62828;">
+          ⚠️ For security reasons, password is not shared via email.
         </p>
         <p>Regards,<br/><b>Kokan Education & Welfare Centre</b></p>
       </div>
     </div>
   `;
 
-sendEmail({
-  to: email,
-  subject: "Admin Registration Successful - KEWC",
-  html,
-})
-  .then(() => console.log("✅ Admin registration email sent"))
-  .catch(err => console.error("❌ Admin registration email failed:", err.message));
+  sendEmail({
+    email: email, // ✅ FIXED
+    subject: "Admin Registration Successful - KEWC",
+    html,
+  }).catch(err =>
+    console.error("❌ Admin registration email failed:", err.message)
+  );
 }
 
 /* ------------------ ADMIN DELETION EMAIL ------------------ */
@@ -60,13 +64,13 @@ function sendAdminDeletionEmail(email, fullName) {
     </div>
   `;
 
-sendEmail({
-  to: email,
-  subject: "Admin Account Deleted - KEWC",
-  html,
-})
-  .then(() => console.log("✅ Admin deletion email sent"))
-  .catch(err => console.error("❌ Admin deletion email failed:", err.message));
+  sendEmail({
+    email: email, // ✅ FIXED
+    subject: "Admin Account Deleted - KEWC",
+    html,
+  }).catch(err =>
+    console.error("❌ Admin deletion email failed:", err.message)
+  );
 }
 
 /* ------------------ GET ALL ADMINS ------------------ */
@@ -84,24 +88,38 @@ router.get("/get-admins", async (req, res) => {
 router.post("/create-admin", async (req, res) => {
   try {
     const { username, fullName, email, password } = req.body;
+
     if (!username || !fullName || !email || !password) {
       return res.status(400).json({ message: "Please fill all details" });
     }
 
     const existingAdmin = await adminModel.findOne({ username });
-    if (existingAdmin) return res.status(409).json({ message: "Username already taken" });
+    if (existingAdmin) {
+      return res.status(409).json({ message: "Username already taken" });
+    }
 
     const hashPassword = await bcrypt.hash(password, 10);
 
-    const newAdmin = new adminModel({ username, fullName, email, password: hashPassword });
+    const newAdmin = new adminModel({
+      username,
+      fullName,
+      email,
+      password: hashPassword,
+    });
+
     await newAdmin.save();
 
     // Email in background
-    sendAdminRegistrationEmail(email, fullName, username, password);
+    sendAdminRegistrationEmail(email, fullName, username);
 
     res.status(201).json({
       message: "Admin created successfully",
-      admin: { id: newAdmin._id, username, fullName, email },
+      admin: {
+        id: newAdmin._id,
+        username,
+        fullName,
+        email,
+      },
     });
   } catch (error) {
     console.error(error);
@@ -113,20 +131,36 @@ router.post("/create-admin", async (req, res) => {
 router.post("/login", async (req, res) => {
   try {
     const { username, password } = req.body;
-    if (!username || !password) return res.status(400).json({ message: "Please fill all details" });
+
+    if (!username || !password) {
+      return res.status(400).json({ message: "Please fill all details" });
+    }
 
     const admin = await adminModel.findOne({ username });
-    if (!admin) return res.status(401).json({ message: "Invalid credentials" });
+    if (!admin) {
+      return res.status(401).json({ message: "Invalid credentials" });
+    }
 
     const isMatch = await bcrypt.compare(password, admin.password);
-    if (!isMatch) return res.status(401).json({ message: "Invalid credentials" });
+    if (!isMatch) {
+      return res.status(401).json({ message: "Invalid credentials" });
+    }
 
-    const token = jwt.sign({ id: admin._id }, process.env.JWT_SECRET, { expiresIn: "1h" });
+    const token = jwt.sign(
+      { id: admin._id },
+      process.env.JWT_SECRET,
+      { expiresIn: "1h" }
+    );
 
     res.status(200).json({
       message: "Login successful",
       token,
-      admin: { id: admin._id, username: admin.username, fullName: admin.fullName, email: admin.email },
+      admin: {
+        id: admin._id,
+        username: admin.username,
+        fullName: admin.fullName,
+        email: admin.email,
+      },
     });
   } catch (error) {
     console.error(error);
@@ -138,7 +172,9 @@ router.post("/login", async (req, res) => {
 router.delete("/delete-admin/:id", async (req, res) => {
   try {
     const adminExist = await adminModel.findById(req.params.id);
-    if (!adminExist) return res.status(404).json({ message: "Admin not found" });
+    if (!adminExist) {
+      return res.status(404).json({ message: "Admin not found" });
+    }
 
     await adminModel.findByIdAndDelete(req.params.id);
 
@@ -147,7 +183,12 @@ router.delete("/delete-admin/:id", async (req, res) => {
 
     res.status(200).json({
       message: "Admin deleted successfully",
-      admin: { id: adminExist._id, username: adminExist.username, fullName: adminExist.fullName, email: adminExist.email },
+      admin: {
+        id: adminExist._id,
+        username: adminExist.username,
+        fullName: adminExist.fullName,
+        email: adminExist.email,
+      },
     });
   } catch (error) {
     console.error(error);
