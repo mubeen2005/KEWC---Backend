@@ -1,48 +1,37 @@
-const nodemailer = require("nodemailer");
+const Brevo = require('@getbrevo/brevo');
 require("dotenv").config();
 
-// transporter (one time)
-const transporter = nodemailer.createTransport({
-  host: "smtp.gmail.com",
-  port: 587,
-  secure: false, // 587 ke liye false hona chahiye
-  auth: {
-    user: process.env.EMAIL_USER,
-    pass: process.env.EMAIL_PASS,
-  },
-  tls: {
-    // Ye line important hai agar certificate issue ho raha ho
-    rejectUnauthorized: false 
-  },
-  connectionTimeout: 15000, 
-});
+const defaultClient = Brevo.ApiClient.instance;
+const apiKey = defaultClient.authentications['api-key'];
 
-// reusable function
+// Render ke Dashboard mein 'BREVO_API_KEY' naam se key add karein
+apiKey.apiKey = process.env.BREVO_API_KEY; 
+
+const apiInstance = new Brevo.TransactionalEmailsApi();
+
 async function sendEmail({ to, subject, html }) {
-  try {
-    await transporter.sendMail({
-      from: `"KEWC" <${process.env.EMAIL_USER}>`,
-      to,
-      subject,
-      html,
-    });
+  const sendSmtpEmail = new Brevo.SendSmtpEmail();
 
-    console.log("✅ Email sent to:", to);
+  sendSmtpEmail.subject = subject;
+  sendSmtpEmail.htmlContent = html;
+  
+  // Sahi sender details
+  sendSmtpEmail.sender = { 
+    "name": "Kokan Education Welfare Center", 
+    "email": "kokaneducationwelfarecenter@gmail.com" 
+  }; 
+  
+  sendSmtpEmail.to = [{ "email": to }];
+
+  try {
+    const data = await apiInstance.sendTransacEmail(sendSmtpEmail);
+    console.log('✅ Brevo Email Sent! ID:', data.messageId);
     return true;
   } catch (error) {
-    console.error("❌ Email failed:", error.message);
+    // Detailed error logging
+    console.error('❌ Brevo Error:', error.response ? JSON.stringify(error.response.body) : error.message);
     return false;
   }
 }
-
-// sendEmail({
-//   to: "mubinshaikj666@gmail.com",
-//   subject: "Donation Received",
-//   html: `
-//     <h2>Thank You 🙏</h2>
-//     <p>Your donation has been successfully received.</p>
-//     <p><b>Kokan Education & Welfare Centre</b></p>
-//   `,
-// });
 
 module.exports = sendEmail;
