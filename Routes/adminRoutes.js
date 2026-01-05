@@ -34,10 +34,13 @@ function sendAdminRegistrationEmail(email, fullName, username, password) {
     </div>
   `;
 
-  // Async background email
-  sendEmail({ email, subject: "Admin Registration Successful - KEWC", html })
-    .then(res => console.log("✅ Admin registration email sent:", res))
-    .catch(err => console.error("❌ Admin registration email failed:", err));
+sendEmail({
+  to: email,
+  subject: "Admin Registration Successful - KEWC",
+  html,
+})
+  .then(() => console.log("✅ Admin registration email sent"))
+  .catch(err => console.error("❌ Admin registration email failed:", err.message));
 }
 
 /* ------------------ ADMIN DELETION EMAIL ------------------ */
@@ -57,9 +60,13 @@ function sendAdminDeletionEmail(email, fullName) {
     </div>
   `;
 
-  sendEmail({ email, subject: "Admin Account Deleted - KEWC", html })
-    .then(res => console.log("✅ Admin deletion email sent:", res))
-    .catch(err => console.error("❌ Admin deletion email failed:", err));
+sendEmail({
+  to: email,
+  subject: "Admin Account Deleted - KEWC",
+  html,
+})
+  .then(() => console.log("✅ Admin deletion email sent"))
+  .catch(err => console.error("❌ Admin deletion email failed:", err.message));
 }
 
 /* ------------------ GET ALL ADMINS ------------------ */

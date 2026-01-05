@@ -1,36 +1,44 @@
 const nodemailer = require("nodemailer");
-require("dotenv").config();
-
-const transporter = nodemailer.createTransport({
-  host: "smtp-relay.brevo.com",
-  port: 587,
-  secure: false,
-  auth: {
-    user: process.env.BREVO_USER,
-    pass: process.env.BREVO_PASS,
-  },
-  connectionTimeout: 10000, // 10 seconds
-  greetingTimeout: 10000,
-  socketTimeout: 10000,
+const path = require("path");
+require("dotenv").config({
+  path: path.resolve(__dirname, "../.env"),
 });
 
+// transporter (one time)
+const transporter = nodemailer.createTransport({
+  service: "gmail",
+  auth: {
+    user: process.env.EMAIL_USER,
+    pass: process.env.EMAIL_PASS,
+  },
+});
 
-async function sendEmail({ email, subject, html, attachments = [] }) {
+// reusable function
+async function sendEmail({ to, subject, html }) {
   try {
-    const info = await transporter.sendMail({
-      from: `"Kokan Education & Welfare Centre" <${process.env.BREVO_USER}>`,
-      to: email,
+    await transporter.sendMail({
+      from: `"KEWC" <${process.env.EMAIL_USER}>`,
+      to,
       subject,
       html,
-      attachments,
     });
 
-    console.log("✅ Email sent:", info.messageId);
-    return { success: true };
+    console.log("✅ Email sent to:", to);
+    return true;
   } catch (error) {
-    console.error("❌ Email failed:", error);
-    return { success: false, error: error.message };
+    console.error("❌ Email failed:", error.message);
+    return false;
   }
 }
+
+// sendEmail({
+//   to: "mubinshaikj666@gmail.com",
+//   subject: "Donation Received",
+//   html: `
+//     <h2>Thank You 🙏</h2>
+//     <p>Your donation has been successfully received.</p>
+//     <p><b>Kokan Education & Welfare Centre</b></p>
+//   `,
+// });
 
 module.exports = sendEmail;
