@@ -1,35 +1,28 @@
-const Brevo = require('@getbrevo/brevo');
+const nodemailer = require("nodemailer");
 require("dotenv").config();
 
-const defaultClient = Brevo.ApiClient.instance;
-const apiKey = defaultClient.authentications['api-key'];
+const transporter = nodemailer.createTransport({
+  service: "gmail",
+  auth: {
+    user: process.env.EMAIL_USER,
+    pass: process.env.EMAIL_PASS,
+  },
+});
 
-// Render ke Dashboard mein 'BREVO_API_KEY' naam se key add karein
-apiKey.apiKey = process.env.BREVO_API_KEY; 
-
-const apiInstance = new Brevo.TransactionalEmailsApi();
-
-async function sendEmail({ to, subject, html }) {
-  const sendSmtpEmail = new Brevo.SendSmtpEmail();
-
-  sendSmtpEmail.subject = subject;
-  sendSmtpEmail.htmlContent = html;
-  
-  // Sahi sender details
-  sendSmtpEmail.sender = { 
-    "name": "Kokan Education Welfare Center", 
-    "email": "kokaneducationwelfarecenter@gmail.com" 
-  }; 
-  
-  sendSmtpEmail.to = [{ "email": to }];
-
+async function sendEmail({ email, subject, html, attachments = [] }) {
   try {
-    const data = await apiInstance.sendTransacEmail(sendSmtpEmail);
-    console.log('✅ Brevo Email Sent! ID:', data.messageId);
+    await transporter.sendMail({
+      from: `"KEWC" <${process.env.EMAIL_USER}>`,
+      to: email,
+      subject,
+      html,
+      attachments,
+    });
+
+    console.log("✅ Email sent to:", email);
     return true;
   } catch (error) {
-    // Detailed error logging
-    console.error('❌ Brevo Error:', error.response ? JSON.stringify(error.response.body) : error.message);
+    console.error("❌ Email failed:", error.message);
     return false;
   }
 }
